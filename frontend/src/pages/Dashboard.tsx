@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   BookOpenIcon, 
   UserGroupIcon, 
   AcademicCapIcon,
   ClockIcon 
 } from '@heroicons/react/24/outline';
+import { SubscriptionCard } from '../components/subscription/SubscriptionCard';
+import { useSubscriptionStore } from '../stores/subscriptionStore';
+import { useAuthStore } from '../stores/authStore';
 
 export const Dashboard: React.FC = () => {
+  const { user } = useAuthStore();
+  const { setCurrentPlan, updateUsageStats } = useSubscriptionStore();
+
+  useEffect(() => {
+    // Initialize subscription data based on user's subscription tier
+    if (user?.subscriptionTier) {
+      setCurrentPlan(user.subscriptionTier as any);
+    }
+
+    // Mock usage data - in real app, this would come from API
+    updateUsageStats({
+      minutesUsed: 15,
+      companionsCreated: 2,
+      coursesCreated: 3,
+    });
+  }, [user, setCurrentPlan, updateUsageStats]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -15,52 +35,59 @@ export const Dashboard: React.FC = () => {
         <p className="text-gray-600">Welcome back! Here's your learning overview.</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <BookOpenIcon className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Courses</p>
-              <p className="text-2xl font-bold text-gray-900">3</p>
-            </div>
-          </div>
+      {/* Subscription Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <SubscriptionCard />
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <UserGroupIcon className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">AI Companions</p>
-              <p className="text-2xl font-bold text-gray-900">2</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <AcademicCapIcon className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Completed Tests</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
+        {/* Stats Grid */}
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <BookOpenIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Courses</p>
+                <p className="text-2xl font-bold text-gray-900">3</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <ClockIcon className="h-6 w-6 text-orange-600" />
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <UserGroupIcon className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">AI Companions</p>
+                <p className="text-2xl font-bold text-gray-900">2</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Study Hours</p>
-              <p className="text-2xl font-bold text-gray-900">24</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <AcademicCapIcon className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Completed Tests</p>
+                <p className="text-2xl font-bold text-gray-900">12</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <ClockIcon className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Study Hours</p>
+                <p className="text-2xl font-bold text-gray-900">24</p>
+              </div>
             </div>
           </div>
         </div>

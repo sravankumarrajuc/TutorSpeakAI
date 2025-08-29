@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import rateLimit from 'express-rate-limit';
+import { apiLimiter, authLimiter } from '@/middleware/rateLimit';
 import dotenv from 'dotenv';
 
 import { logger, morganStream } from '@/utils/logger';
@@ -26,6 +26,13 @@ import { setupWebSocketHandlers } from '@/websocket';
 // Load environment variables
 dotenv.config();
 
+// CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5177", 
+  process.env.CORS_ORIGIN
+].filter(Boolean);
+
 // Create Express app
 const app = express();
 
@@ -35,7 +42,7 @@ const server = createServer(app);
 // Create Socket.io server
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5177"],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -58,26 +65,30 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // In development, allow any localhost origin
+    if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use('/api', limiter);
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
 
 // Logging middleware
 app.use(morgan('combined', { stream: morganStream }));

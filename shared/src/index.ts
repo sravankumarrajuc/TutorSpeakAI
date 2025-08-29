@@ -2,6 +2,7 @@
 export * from './types/common';
 export * from './types/api';
 export * from './types/websocket';
+export * from './types/pricing';
 
 // Export utilities
 export * from './utils/constants';

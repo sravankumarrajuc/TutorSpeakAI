@@ -6,6 +6,9 @@ import {
   TrashIcon,
   BookOpenIcon 
 } from '@heroicons/react/24/outline';
+import { courseApi, CreateCourseRequest } from '@/services/api';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface Chapter {
   id: string;
@@ -15,6 +18,7 @@ interface Chapter {
 }
 
 export const CourseCreator: React.FC = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [courseData, setCourseData] = useState({
     title: '',
@@ -24,6 +28,8 @@ export const CourseCreator: React.FC = () => {
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
 
   const handleCourseDataChange = (field: string, value: string) => {
     setCourseData(prev => ({ ...prev, [field]: value }));
@@ -58,9 +64,78 @@ export const CourseCreator: React.FC = () => {
     setChapters(prev => prev.filter(chapter => chapter.id !== id));
   };
 
-  const handleGenerateCourse = () => {
-    // TODO: Implement AI course generation
-    console.log('Generating course with:', { courseData, uploadedFiles });
+  const handleGenerateCourse = async () => {
+    if (!courseData.title.trim()) {
+      toast.error('Please enter a course title');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Step 1: Create the course
+      const createCourseRequest: CreateCourseRequest = {
+        title: courseData.title,
+        description: courseData.description || undefined,
+        subjectDomain: courseData.subjectDomain || undefined,
+        difficultyLevel: courseData.difficultyLevel || undefined,
+      };
+
+      const courseResponse = await courseApi.createCourse(createCourseRequest);
+      const courseId = courseResponse.data.data?.course.id;
+      
+      if (!courseId) {
+        throw new Error('Failed to get course ID from response');
+      }
+      
+      setCreatedCourseId(courseId);
+
+      toast.success('Course created successfully!');
+
+      // Step 2: Upload documents if any
+      if (uploadedFiles.length > 0) {
+        try {
+          await courseApi.uploadDocuments(courseId, uploadedFiles);
+          toast.success('Documents uploaded successfully!');
+        } catch (uploadError) {
+          console.error('Error uploading documents:', uploadError);
+          toast.error('Failed to upload some documents, but course was created');
+        }
+      }
+
+      // Step 3: Generate course content
+      try {
+        const generateResponse = await courseApi.generateCourse(courseId, {
+          generateNarration: true,
+          generateAssessments: true,
+        });
+
+        toast.success('Course generated successfully!');
+        
+        // Reset form or redirect to course view
+        console.log('Generated course:', generateResponse.data.data);
+        
+        // Redirect to course library to see the new course
+        setTimeout(() => {
+          navigate('/courses');
+        }, 2000);
+        
+      } catch (generateError) {
+        console.error('Error generating course:', generateError);
+        toast.error('Course created but generation failed. You can try generating it later.');
+        
+        // Still redirect to course library after a delay
+        setTimeout(() => {
+          navigate('/courses');
+        }, 3000);
+      }
+
+    } catch (error) {
+      console.error('Error creating course:', error);
+      toast.error('Failed to create course. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderStep1 = () => (
@@ -340,9 +415,14 @@ export const CourseCreator: React.FC = () => {
         ) : (
           <button
             onClick={handleGenerateCourse}
-            className="px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+            disabled={isLoading}
+            className={`px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+              isLoading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
-            Generate Course
+            {isLoading ? 'Generating Course...' : 'Generate Course'}
           </button>
         )}
       </div>

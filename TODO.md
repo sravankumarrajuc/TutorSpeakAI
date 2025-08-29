@@ -1,22 +1,28 @@
-# Database Connection Fix - TODO
+# TODO: Change Enterprise Free to Enterprise Custom
 
-## Steps to Complete:
-- [x] Create database connection test script (JavaScript)
-- [x] Create database connection test script (TypeScript) 
-- [x] Update package.json with convenient npm scripts
-- [ ] Check if database container is running
-- [ ] Generate Prisma client
-- [ ] Test database connection using multiple methods
-- [ ] Verify the fix works
+## Plan Approved
+- [x] Analyze current pricing display logic
+- [x] Identify the formatPrice function in PricingSection.tsx
+- [x] Confirm plan with user
 
-## Current Status:
-- [x] Identified root cause: `$` characters stripped from `$connect()` and `$disconnect()`
-- [x] Analyzed project structure and Prisma configuration
-- [x] Created test scripts and updated package.json
-- [ ] In Progress: Testing database connection
+## Implementation Steps
+- [x] Modify formatPrice function in PricingSection.tsx to show "Custom" for Enterprise plan
+- [x] Test the change to ensure Enterprise shows "Custom" while Free plan still shows "Free"
+- [x] Verify no other pricing displays are affected
 
-## Available Commands:
-- `npm run db:test` - Test connection with JavaScript
-- `npm run db:test:ts` - Test connection with TypeScript  
-- `npm run db:setup` - Generate client, migrate, and test
-=======
+## Files to Edit
+- [x] `frontend/src/components/landing/PricingSection.tsx` - Update formatPrice function
+
+## Expected Result
+- [x] Enterprise plan will display "Custom" instead of "Free"
+- [x] Free plan will continue to display "Free"
+- [x] All other plans remain unchanged
+
+## Implementation Summary
+Successfully updated the `formatPrice` function in `PricingSection.tsx` to:
+- Check if the plan ID is 'enterprise' when price is 0
+- Return "Custom" for Enterprise plan
+- Return "Free" for the actual free plan
+- Keep existing logic for all other plans with actual prices
+
+The change is minimal and targeted, ensuring no other functionality is affected.
