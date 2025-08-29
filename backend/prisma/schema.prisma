@@ -1,0 +1,281 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String   @map("password_hash")
+  firstName        String?  @map("first_name")
+  lastName         String?  @map("last_name")
+  avatarUrl        String?  @map("avatar_url")
+  subscriptionTier String   @default("free") @map("subscription_tier")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  companions         Companion[]
+  courses            Course[]
+  sessions           Session[]
+  courseProgress     UserCourseProgress[]
+  assessmentAttempts AssessmentAttempt[]
+  settings           UserSettings?
+
+  @@map("users")
+}
+
+model Companion {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  name          String
+  avatarUrl     String?  @map("avatar_url")
+  subjectDomain String?  @map("subject_domain")
+  systemPrompt  String   @map("system_prompt")
+  voiceId       String?  @map("voice_id")
+  speakingStyle String?  @map("speaking_style")
+  isPublic      Boolean  @default(false) @map("is_public")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses          Course[]
+  sessions         Session[]
+  knowledgeSources KnowledgeSource[]
+
+  @@map("companions")
+}
+
+model Course {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  companionId       String?  @map("companion_id")
+  title             String
+  description       String?
+  subjectDomain     String?  @map("subject_domain")
+  difficultyLevel   String?  @map("difficulty_level")
+  estimatedDuration Int?     @map("estimated_duration")
+  isPublic          Boolean  @default(false) @map("is_public")
+  status            String   @default("draft")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companion       Companion?           @relation(fields: [companionId], references: [id], onDelete: SetNull)
+  documents       CourseDocument[]
+  chapters        Chapter[]
+  assessments     Assessment[]
+  userProgress    UserCourseProgress[]
+
+  @@map("courses")
+}
+
+model CourseDocument {
+  id               String   @id @default(cuid())
+  courseId         String   @map("course_id")
+  originalFilename String   @map("original_filename")
+  filePath         String   @map("file_path")
+  fileType         String   @map("file_type")
+  fileSize         Int      @map("file_size")
+  processingStatus String   @default("pending") @map("processing_status")
+  extractedContent String?  @map("extracted_content")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relations
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_documents")
+}
+
+model Chapter {
+  id                  String   @id @default(cuid())
+  courseId            String   @map("course_id")
+  title               String
+  content             String
+  orderIndex          Int      @map("order_index")
+  estimatedDuration   Int?     @map("estimated_duration")
+  voiceNarrationUrl   String?  @map("voice_narration_url")
+  narrationStatus     String   @default("pending") @map("narration_status")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  course              Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  assessments         Assessment[]
+  userProgress        UserCourseProgress[]  @relation("CurrentChapter")
+
+  @@map("chapters")
+}
+
+model Assessment {
+  id            String   @id @default(cuid())
+  courseId      String   @map("course_id")
+  chapterId     String?  @map("chapter_id")
+  title         String
+  description   String?
+  type          String
+  timeLimit     Int?     @map("time_limit")
+  passingScore  Int      @default(70) @map("passing_score")
+  isVoiceGuided Boolean  @default(true) @map("is_voice_guided")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  course   Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  chapter  Chapter?            @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts AssessmentAttempt[]
+
+  @@map("assessments")
+}
+
+model Question {
+  id                   String   @id @default(cuid())
+  assessmentId         String   @map("assessment_id")
+  questionText         String   @map("question_text")
+  questionType         String   @map("question_type")
+  options              Json?
+  correctAnswer        String   @map("correct_answer")
+  explanation          String?
+  points               Int      @default(1)
+  orderIndex           Int      @map("order_index")
+  voiceInstructionUrl  String?  @map("voice_instruction_url")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  // Relations
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model UserCourseProgress {
+  id                   String    @id @default(cuid())
+  userId               String    @map("user_id")
+  courseId             String    @map("course_id")
+  currentChapterId     String?   @map("current_chapter_id")
+  completionPercentage Decimal   @default(0) @map("completion_percentage")
+  startedAt            DateTime  @default(now()) @map("started_at")
+  completedAt          DateTime? @map("completed_at")
+  lastAccessedAt       DateTime  @default(now()) @map("last_accessed_at")
+
+  // Relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  currentChapter Chapter? @relation("CurrentChapter", fields: [currentChapterId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, courseId])
+  @@map("user_course_progress")
+}
+
+model AssessmentAttempt {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  assessmentId String    @map("assessment_id")
+  score        Int?
+  maxScore     Int?      @map("max_score")
+  percentage   Decimal?
+  answers      Json
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  timeTaken    Int?      @map("time_taken")
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("assessment_attempts")
+}
+
+model KnowledgeSource {
+  id          String   @id @default(cuid())
+  companionId String   @map("companion_id")
+  type        String
+  sourceUrl   String?  @map("source_url")
+  filePath    String?  @map("file_path")
+  title       String?
+  contentHash String?  @map("content_hash")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_sources")
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  companionId   String    @map("companion_id")
+  title         String?
+  status        String    @default("active")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  endedAt       DateTime? @map("ended_at")
+  totalDuration Int?      @map("total_duration")
+  totalTurns    Int       @default(0) @map("total_turns")
+  totalTokens   Int       @default(0) @map("total_tokens")
+
+  // Relations
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companion Companion   @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  analytics Analytics[]
+
+  @@map("sessions")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  sessionId      String   @map("session_id")
+  role           String
+  content        String
+  audioUrl       String?  @map("audio_url")
+  timestampStart Int?     @map("timestamp_start")
+  timestampEnd   Int?     @map("timestamp_end")
+  tokensUsed     Int?     @map("tokens_used")
+  latencyMs      Int?     @map("latency_ms")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  metricName  String   @map("metric_name")
+  metricValue Decimal  @map("metric_value")
+  metadata    Json?
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("analytics")
+}
+
+model UserSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  preferredVoice   String?  @map("preferred_voice")
+  autoSaveSessions Boolean  @default(true) @map("auto_save_sessions")
+  pushToTalk       Boolean  @default(false) @map("push_to_talk")
+  noiseSuppression Boolean  @default(true) @map("noise_suppression")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
